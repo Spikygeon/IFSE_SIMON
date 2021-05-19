@@ -1,0 +1,319 @@
+
+#include <stdio.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <semaphore.h>
+#include "GPIO.h"
+
+using namespace BBB;
+using namespace std;
+
+int eventCounter;
+GPIO lrGPIO(67);   //led rojo -P8_8
+GPIO lyGPIO(68);   //led amarillo P8_10
+GPIO lgGPIO(44);   //led verde P8_12
+GPIO lbGPIO(26);   //led azul P_14
+
+//variables input
+GPIO PrGPIO(66);    //pulsador rojo P8_7
+GPIO PyGPIO(69);  //Plaster amarillo P8_9
+GPIO PgGPIO(45);    //pulsador verde P8_11
+GPIO PbGPIO(47); //pulsador azul P8_15
+GPIO inGPIO(60);    //pulsador inicio/Pause P9_22
+
+#define MAX_PATRON 10
+
+
+
+pthread_mutex_t mutex_variables;//mutex de las variable
+
+#define LDR_POTSpeed "/sys/bus/iio/devices/iio:device0/in_voltage0" //p9_39
+#define LDR_POTTIME "/sys/bus/iio/devices/iio:device0/in_voltage2" //p9_37
+
+int PotenciometroSpeed() {
+	int number;
+	FILE *fptr;
+	fptr = fopen(LDR_POTSpeed,"r");
+	fscanf(fptr, "%i", &number);
+	fclose(fptr);
+	return number;
+}
+int PotenciometroTiempo() {
+	int number;
+	FILE *fptr;
+	fptr = fopen(LDR_POTTIME,"r");
+	fscanf(fptr, "%i", &number);
+	fclose(fptr);
+	return number;
+}
+class Variables {
+private:
+
+	int patron_sequence[MAX_PATRON];
+	int timer_value, ledRed, ledYellow, ledBlue, ledGreen,
+	BottonRed, BottonYellow, BottonGreen, BottonBlue, BottonInPau,
+	game_Speed, game_Time, Pot_Speed, Pot_Time;;
+
+public:
+	/***
+	 * Getter variables
+	 */
+	Variables(){ // @suppress("Class members should be properly initialized")
+		lrGPIO.setDirection(GPIO::OUTPUT);
+		lyGPIO.setDirection(GPIO::OUTPUT);
+		lbGPIO.setDirection(GPIO::OUTPUT);
+		lgGPIO.setDirection(GPIO::OUTPUT);
+		PrGPIO.setDirection(GPIO::INPUT);
+		PyGPIO.setDirection(GPIO::INPUT);
+		PbGPIO.setDirection(GPIO::INPUT);
+		PgGPIO.setDirection(GPIO::INPUT);
+	}
+	int getSpeed() {
+		pthread_mutex_lock(&mutex_variables);
+		int aux = game_Speed;
+		pthread_mutex_unlock(&mutex_variables);
+		return aux;
+	}
+	int getpotTime() {
+		pthread_mutex_lock(&mutex_variables);
+		int aux = game_Time;
+		pthread_mutex_unlock(&mutex_variables);
+		return aux;
+	}
+	int getPot_Speed(){
+		pthread_mutex_lock(&mutex_variables);
+		Pot_Time = PotenciometroSpeed();
+		pthread_mutex_unlock(&mutex_variables);
+		return Pot_Time;
+	}
+	int getPot_Time(){
+		pthread_mutex_lock(&mutex_variables);
+		int aux = PotenciometroTiempo();
+		pthread_mutex_unlock(&mutex_variables);
+		return aux;
+	}
+	int getTimer_value() {
+		pthread_mutex_lock(&mutex_variables);
+		int aux = timer_value;
+		pthread_mutex_unlock(&mutex_variables);
+		return aux;
+	}
+	int getledRed() {
+		pthread_mutex_lock(&mutex_variables);
+		return lrGPIO.getValue();
+	}
+	int getledYellow() {
+		pthread_mutex_lock(&mutex_variables);
+		int aux = lyGPIO.getValue();
+		pthread_mutex_unlock(&mutex_variables);
+		return aux;
+	}
+	int getledBlue() {
+		pthread_mutex_lock(&mutex_variables);
+		int aux = lbGPIO.getValue();
+		pthread_mutex_unlock(&mutex_variables);
+		return aux;
+	}
+	int getledGreen() {
+		pthread_mutex_lock(&mutex_variables);
+		int aux = lgGPIO.getValue();
+
+		pthread_mutex_unlock(&mutex_variables);
+		return aux;
+	}
+	int getBottonRed() {
+		pthread_mutex_lock(&mutex_variables);
+		int aux = PrGPIO.getValue();
+		pthread_mutex_unlock(&mutex_variables);
+		return aux;
+	}
+	int getBottonYellow() {
+		pthread_mutex_lock(&mutex_variables);
+		int aux = PyGPIO.getValue();
+		pthread_mutex_unlock(&mutex_variables);
+		return aux;
+	}
+	int getBottonBlue() {
+		pthread_mutex_lock(&mutex_variables);
+		int aux = PbGPIO.getValue();
+
+		pthread_mutex_unlock(&mutex_variables);
+		return aux;
+	}
+	int getBottonGreen() {
+		pthread_mutex_lock(&mutex_variables);
+		int aux = PgGPIO.getValue();
+		pthread_mutex_unlock(&mutex_variables);
+		return aux;
+	}
+	int getBottonINPAu() {
+		pthread_mutex_lock(&mutex_variables);
+		int aux = inGPIO.getValue();
+		pthread_mutex_unlock(&mutex_variables);
+		return aux;
+	}
+	/***
+	 * Setter variables
+	 */
+
+	void SetGame_Speed(double x) {
+		pthread_mutex_lock(&mutex_variables);
+		game_Speed = x;
+		pthread_mutex_unlock(&mutex_variables);
+	}
+	void SetGame_Time(double x) {
+		pthread_mutex_lock(&mutex_variables);
+		game_Time = x;
+		pthread_mutex_unlock(&mutex_variables);
+	}
+	void Setpot_Speed(int x) {
+		pthread_mutex_lock(&mutex_variables);
+		Pot_Speed= x;
+		pthread_mutex_unlock(&mutex_variables);
+	}
+	void Setpot_Time(int x) {
+		pthread_mutex_lock(&mutex_variables);
+		Pot_Time = x;
+		pthread_mutex_unlock(&mutex_variables);
+	}
+	void setTimer_value(int x) {
+		pthread_mutex_lock(&mutex_variables);
+		timer_value = x;
+		pthread_mutex_unlock(&mutex_variables);
+	}
+	void setledRed(GPIO::VALUE value) {
+		lrGPIO.setValue(value);
+	}
+	void setledYellow(GPIO::VALUE value) {
+		lyGPIO.setValue(value);
+	}
+	void setledBlue(GPIO::VALUE value) {
+		lbGPIO.setValue(value);
+	}
+	void setledGreen(GPIO::VALUE value) {
+		lgGPIO.setValue(value);
+	}
+	void setBottonRed(GPIO::VALUE value) {
+		pthread_mutex_lock(&mutex_variables);
+		PrGPIO.setValue(value);
+		pthread_mutex_unlock(&mutex_variables);
+	}
+	void setBottonYellow(GPIO::VALUE value) {
+		pthread_mutex_lock(&mutex_variables);
+		PyGPIO.setValue(value);
+		pthread_mutex_unlock(&mutex_variables);
+	}
+	void setBottonBlue(GPIO::VALUE value) {
+		pthread_mutex_lock(&mutex_variables);
+		PbGPIO.setValue(value);
+		pthread_mutex_unlock(&mutex_variables);
+	}
+	void setBottonGreen(GPIO::VALUE value) {
+		pthread_mutex_lock(&mutex_variables);
+		PgGPIO.setValue(value);
+		pthread_mutex_unlock(&mutex_variables);
+	}
+	void setBottonStart_Pause(GPIO::VALUE value) {
+		pthread_mutex_lock(&mutex_variables);
+		inGPIO.setValue(value);
+		pthread_mutex_unlock(&mutex_variables);
+	}
+};
+/*
+void beep(GPIO *pin, long periodo, long duracion) {
+	long i=0;
+	long iteraciones = duracion / periodo;
+	for(i=0;i<iteraciones;i++) {
+		pin->setValue(GPIO::HIGH);
+		usleep(periodo);
+		pin->setValue(GPIO::LOW);
+		//usleep(periodo);
+	}
+}
+ */
+int main() {
+
+	Variables variable;
+	printf("Hello BBB GPIO.\n");
+	/*
+	outGPIO.setDirection(GPIO::OUTPUT);
+	beep(&outGPIO,500,100000);
+	usleep(500000);
+	beep(&outGPIO,1000,100000);
+	usleep(500000);
+	beep(&outGPIO,2000,100000);
+	usleep(500000);
+	beep(&outGPIO,3000,100000);
+	usleep(500000);
+	beep(&outGPIO,5000,500000);
+	usleep(500000);
+	beep(&outGPIO,10000,500000);
+	 */
+
+	/*
+	outGPIO.setDirection(GPIO::OUTPUT);
+	inGPIO.setDirection(GPIO::INPUT);
+	inGPIO.setActiveHigh();
+	inGPIO.setEdgeType(GPIO::RISING);
+	inGPIO.setDebounceTime(200);
+	inGPIO.waitForEdge(eventHandler);
+	for(;;) usleep(30000000);
+	 */
+
+
+	/*
+	outGPIO.setDirection(GPIO::OUTPUT);
+	inGPIO.setDirection(GPIO::INPUT);
+	for(;;) {
+		GPIO::VALUE value = inGPIO.getValue();
+
+		if (value == GPIO::HIGH) {
+			printf("HIGH\n");
+			outGPIO.setValue(GPIO::HIGH);
+			usleep(5000000);
+			outGPIO.setValue(GPIO::LOW);
+		} else {
+			printf("LOW\n");
+		}
+		usleep(100000);
+	}
+	 */
+
+
+
+
+	while (true) {
+
+		int pulsado = variable.getBottonBlue();
+		printf( "%d",pulsado);
+		if (pulsado == 1) {
+			printf("\n");
+			variable.setledBlue(GPIO::HIGH);
+			variable.setledRed(GPIO::HIGH);
+			variable.setledYellow(GPIO::HIGH);
+
+
+		} else {
+			printf("LOW\n");
+			lrGPIO.setValue(GPIO::LOW);
+			lbGPIO.setValue(GPIO::LOW);
+			lgGPIO.setValue(GPIO::LOW);
+			lyGPIO.setValue(GPIO::LOW);
+		}
+		usleep(500000);
+	}
+
+
+
+	/*
+	outGPIO.setDirection(GPIO::OUTPUT);
+	outGPIO.streamOpen();
+	for (;;) {
+		outGPIO.streamWrite(GPIO::HIGH);
+		outGPIO.streamWrite(GPIO::LOW);
+	}
+	outGPIO.streamClose();
+	 */
+
+}
+};
