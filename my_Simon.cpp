@@ -8,6 +8,8 @@
 #include <pthread.h>
 #include <sys/types.h>
 #include <stdlib.h>
+#include "variables.h"
+#include "GPIO.h"
 
 #define MAXSTATES_DEF 6
 #define MAXLISTENERS_DEF 8
@@ -24,6 +26,8 @@
 
 enum VALUE{ LOW=0, HIGH=1 };
 
+int game_speed 	= 1 * 1000000;
+int game_time	= 3 * 1000000;
 
 //////////////////////////////////////////////////////////////////////////
 class threadConf {
@@ -161,30 +165,78 @@ public:
 //////////////////////////////////////////////////////////////////////////
 //Creamos la variable del StateMonitor
 StateMonitor stateManager;
-//////////////////////////////////////////////////////////////////////////
-
+//Creamos la variable de la clase variables
+Variables variable;
 //////////////////////////////////////////////////////////////////////////
 
 void *pthread_read_input(void *param) {
-	threadConf *cfgPassed = (threadConf*)param;
-	long longPassed = (long) cfgPassed->getArg();
-	int iter = 0;
+
+	printf("pthread_read_input arrancado\n");
+
+	//Inicializamos los leds a apagado
+	led_RED_GPIO.setValue(GPIO::LOW);
+	led_GREEN_GPIO.setValue(GPIO::LOW);
+	led_BLUE_GPIO.setValue(GPIO::LOW);
+	led_YELLOW_GPIO.setValue(GPIO::LOW);
+	led_START_PAUSE_GPIO.setValue(GPIO::LOW);
+
 	for (;;) {
-		int state = stateManager.waitState(cfgPassed);
-		iter++;
-		printf("pthread_read_input:\t operando con %ld (iter. %d) en el estado %d.\n",longPassed, iter, state);
-		usleep(500000);
+
+		int pulsado = variable.get_button_pressed();
+
+		switch(pulsado) {
+
+		case 1:
+			variable.write_HW_led_RED(GPIO::HIGH);
+			printf( "RED HIGH\n");
+			usleep(100000);
+			variable.write_HW_led_RED(GPIO::LOW);
+			break;
+
+		case 2:
+			variable.write_HW_led_GREEN(GPIO::HIGH);
+			printf( "GREEN HIGH\n");
+			usleep(100000);
+			variable.write_HW_led_GREEN(GPIO::LOW);
+			break;
+
+		case 3:
+			variable.write_HW_led_BLUE(GPIO::HIGH);
+			printf( "BLUE HIGH\n");
+			usleep(100000);
+			variable.write_HW_led_BLUE(GPIO::LOW);
+			break;
+
+		case 4:
+			variable.write_HW_led_YELLOW(GPIO::HIGH);
+			printf( "YELLOW HIGH\n");
+			usleep(100000);
+			variable.write_HW_led_YELLOW(GPIO::LOW);
+			break;
+
+		case 5:
+			variable.write_HW_START_PAUSE(GPIO::HIGH);
+			printf( "PAUSA HIGH\n");
+			usleep(100000);
+			variable.write_HW_START_PAUSE(GPIO::LOW);
+			break;
+
+		default:
+			break;
+		}
+
+		usleep(100000);
 	}
 }
 
 void *pthread_config_game(void *param) {
-	threadConf *cfgPassed = (threadConf*)param;
-	long longPassed = (long) cfgPassed->getArg();
-	int iter = 0;
+
+	printf("pthread_config_game: arrancado\n");
+
 	for (;;) {
-		int state = stateManager.waitState(cfgPassed);
-		iter++;
-		printf("pthread_config_game:\t operando con %ld (iter. %d) en el estado %d.\n",longPassed, iter, state);
+		//		int state = stateManager.waitState(cfgPassed);
+		//		iter++;
+		//		printf("pthread_config_game:\t operando con %ld (iter. %d) en el estado %d.\n",longPassed, iter, state);
 		usleep(500000);
 	}
 }
@@ -196,18 +248,12 @@ int game_level = 0;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void *pthread_show_patron(void *param) {
-	threadConf *cfgPassed = (threadConf*)param;
-	long longPassed = (long) cfgPassed->getArg();
-	int iter = 0;
 
 	int randomNum;
 
+	printf("pthread_show_patron: arrancado\n");
 
 	for(;;) {
-
-		int state = stateManager.waitState(cfgPassed);
-		iter++;
-		printf("pthread_show_patron:\t operando con %ld (iter. %d) en el estado %d.\n",longPassed, iter, state);
 
 		// Se genera un valor aleatorio del patrón
 		randomNum = rand() % 4 + 1;		// Colores del 1 al 4
@@ -217,33 +263,49 @@ void *pthread_show_patron(void *param) {
 		shown_sequence[game_level] = randomNum;
 
 		// Se muestra la secuencia del patron
-		for (int i=0; i<=game_level ;i++)
-		{
+		for (int i=0; i<=game_level ;i++) {
 			// Se enciende el LED del patron
 			switch (shown_sequence[i]) {
 
 			case 1:	//RED
-				//setLedRed(HIGH);
+				printf("pthread_show_patron: set RED\n");
+				variable.write_HW_led_RED(GPIO::HIGH);
+				usleep(game_speed);
+				variable.write_HW_led_RED(GPIO::LOW);
 				break;
 
 			case 2:	//GREEN
-				//setLedGreen(HIGH);
+				printf("pthread_show_patron: set GREEN\n");
+				variable.write_HW_led_GREEN(GPIO::HIGH);
+				usleep(game_speed);
+				variable.write_HW_led_GREEN(GPIO::LOW);
 				break;
 
 			case 3:	//BLUE
-				//setLedBlue(HIGH);
+				printf("pthread_show_patron: set BLUE\n");
+				variable.write_HW_led_BLUE(GPIO::HIGH);
+				usleep(game_speed);
+				variable.write_HW_led_BLUE(GPIO::LOW);
 				break;
 
 			case 4:	//YELLOW
-				//setLedYellow(HIGH);
+				printf("pthread_show_patron: set YELLOW\n");
+				variable.write_HW_led_YELLOW(GPIO::HIGH);
+				usleep(game_speed);
+				variable.write_HW_led_YELLOW(GPIO::LOW);
+				break;
+
+			case 5:	//START-PAUSE
+				printf("pthread_show_patron: set START PAUSE\n");
+				variable.write_HW_START_PAUSE(GPIO::HIGH);
+				usleep(game_speed);
+				variable.write_HW_START_PAUSE(GPIO::LOW);
 				break;
 
 			default:	//Nunca debería entrar aquí
+				printf("pthread_show_patron: NO DEBERIAMOS ENTRAR AQUÍ, case default. \n");
 				break;
 			}
-
-			// Dormimos el tiempo configurado por la dificultad
-			//usleep(getSpeed());
 		}
 
 		int j;
@@ -252,84 +314,74 @@ void *pthread_show_patron(void *param) {
 		}
 
 		// Terminada la secuencia damos unos segundos de margen y cambiamos de estado
-		usleep(1000000);
+		usleep(5000000);
+
+		game_level++;
 
 		// Cambiamos de paso
-		stateManager.changeState(INSERT_PATRON_STATE);
+		//stateManager.changeState(INSERT_PATRON_STATE);
 
+		printf("pthread_show_patron: NIVEL AUMENTADO\n");
 	}
 }
 
 void *pthread_insert_patron(void *param) {
-	threadConf *cfgPassed = (threadConf*)param;
-	long longPassed = (long) cfgPassed->getArg();
-	int iter = 0;
-	for (;;) {
-		int state = stateManager.waitState(cfgPassed);
-		iter++;
-		printf("pthread_insert_patron:\t operando con %ld (iter. %d) en el estado %d.\n",longPassed, iter, state);
-		usleep(500000);
 
-		if (iter >= 5) {
-			iter = 0;
+	int i;
+	int buttonPressed;
+
+	for (;;) {
+
+		for (i=0; i<game_level; i++) {
+
+			//myTimeOffset = getTimer();
+
+			do {
+				//leo pulsación
+				buttonPressed = 1;
+				printf("buttonPressed = %d\n",buttonPressed);
+
+			}while(false);	//((getTimer() < myTimeOffset + game_time) || pulsacion_detectada)
+
+			if(true) {		//((getTimer() >= myTimeOffset + game_time)
+
+				//Timeout superado!
+				stateManager.changeState(YOU_LOSE_STATE);
+
+			} else {
+
+				//comprobamos el botón pulsado
+				if (buttonPressed != shown_sequence[ i ]) {
+
+					//Botón erróneo!
+					stateManager.changeState(YOU_LOSE_STATE);
+				}
+			}
+		}
+
+		if (false) {		//TODO: Comprobamos si estamos en el último nivel
+			//Hemos ganado!!!
+			stateManager.changeState(YOU_WIN_STATE);
+		}
+		else {
+			//Pasamos al siguiente nivel
+			game_level++;
 			stateManager.changeState(SHOW_PATRON_STATE);
 		}
 	}
-
-	//////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-	int myTimeOffset;
-	int i;
-	int buttonPressed;
-	for (i=0; i<game_level; i++) {
-
-		//myTimeOffset = getTimer();
-
-		do {
-			//leo pulsación
-			buttonPressed = 1;
-			printf("buttonPressed = %d\n",buttonPressed);
-
-		}while(true);	//((getTimer() < myTimeOffset + game_time) || pulsacion_detectada)
-
-		if(false) {		//((getTimer() >= myTimeOffset + game_time)
-
-			//Timeout superado!
-			stateManager.changeState(YOU_LOSE_STATE);
-
-		} else {
-
-			//comprobamos el botón pulsado
-			if (buttonPressed != shown_sequence[ i ]) {
-
-				//Botón erróneo!
-				stateManager.changeState(YOU_LOSE_STATE);
-			}
-		}
-	}
-
-	if (false) {		//TODO: Comprobamos si estamos en el último nivel
-		//Hemos ganado!!!
-		stateManager.changeState(YOU_WIN_STATE);
-	}
-	else {
-		//Pasamos al siguiente nivel
-		stateManager.changeState(SHOW_PATRON_STATE);
-	}
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 void *pthread_timer(void *param) {
-	threadConf *cfgPassed = (threadConf*)param;
-	long longPassed = (long) cfgPassed->getArg();
-	int iter = 0;
+
 	int counterTimer = 0;
 	int mySleepTime = 1000000;
-	int lastValue = 0;
+
+	printf("pthread_timer: arrancado\n");
+
 	for (;;) {
-		int state = stateManager.waitState(cfgPassed);
-		iter++;
-		printf("pthread_timer:\t\t operando con %ld (iter. %d) en el estado %d.\n",longPassed, iter, state);
 
 		printf("SHOW_TIEMPO: %d\n", counterTimer * mySleepTime /1000000);	//Devuelve en segundos
 		counterTimer++;
@@ -350,53 +402,81 @@ void *pthread_lcd(void *param) {
 }
 
 void *pthread_pause(void *param) {
-	threadConf *cfgPassed = (threadConf*)param;
-	long longPassed = (long) cfgPassed->getArg();
-	int iter = 0;
+
+	printf("pthread_pause: arrancado\n");
 
 	for (;;) {
-		int state = stateManager.waitState(cfgPassed);
-		iter++;
-		bool button_START_PAUSE = true;			//TODO: Recoger el valor de la variable
-		printf("pthread_pause:\t\t operando con %ld (iter. %d) en el estado %d.\n",longPassed, iter, state);
 
-		if (button_START_PAUSE == true) {
+		if (variable.get_button_START_PAUSE() == true) {
 
-			if (stateManager.getState() !=  PAUSE_STATE) {
+			if (stateManager.getState() ==  PAUSE_STATE) {
+				//Volvemos al último estado activo
+				stateManager.changeState(stateManager.getPreviousState());
+
+			} else if (stateManager.getState() ==  YOU_WIN_STATE) {
+				//Reiniciamos juego
+				stateManager.changeState(INIT_STATE);
+
+			} else if (stateManager.getState() ==  YOU_LOSE_STATE) {
+				//Reiniciamos juego
+				stateManager.changeState(INIT_STATE);
+			} else {
 				//Vamos al estado de pausa
 				stateManager.changeState(PAUSE_STATE);
 			}
-			else {
-				//Volvemos al último estado activo
-				stateManager.changeState(stateManager.getPreviousState());
-			}
 		}
-		usleep(500000);
+
+		usleep(100000);
 	}
 }
 
 void *pthread_state_monitor(void *param) {
-	threadConf *cfgPassed = (threadConf*)param;
-	long longPassed = (long) cfgPassed->getArg();
-	int iter = 0;
 
-	//	/////// Ejemplo de control de gestor de transición de estados
-	//	int myState = 0;
-	//	for(;;) {
-	//		int state = stateManager.waitState(cfgPassed);
-	//		iter++;
-	//		printf("pthread_state_monitor:\t operando con %ld (iter. %d) en el estado %d.\n",longPassed, iter, state);
-	//
-	//		usleep(5000000);
-	//		myState = (stateManager.getState() + 1) % 4;
-	//		stateManager.changeState(myState);
-	//	}
+
+	printf("pthread_state_monitor: arrancado\n");
+
+	for (;;) {
+
+		switch(stateManager.getState()) {
+
+		case INIT_STATE:
+			break;
+
+		case SHOW_PATRON_STATE:
+			break;
+
+		case INSERT_PATRON_STATE:
+			break;
+
+		case PAUSE_STATE:
+			break;
+
+		case YOU_WIN_STATE:
+			break;
+
+		case YOU_LOSE_STATE:
+			break;
+
+		default:
+			break;
+		}
+	}
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 void *changeStateHandler(int stFrom, int stTo) {
 	printf("********************** Cambio de estado: desde %d a %d.\n",stFrom,stTo);
+	return(NULL);
+}
+
+void *changeStateHandlerEndGame(int stFrom, int stTo) {
+	printf("********************** Cambio de estado: desde %d a %d.\n",stFrom,stTo);
+	if (stTo == YOU_WIN_STATE) {
+		printf("YOU WIN !!!\n");
+	} else if (stTo == YOU_LOSE_STATE){
+		printf("YOU LOSE !!!\n");
+	}
 	return(NULL);
 }
 //////////////////////////////////////////////////////////////////////////
@@ -418,8 +498,8 @@ int main (void) {
 	stateManager.addStateChangeListener(INIT_STATE,				SHOW_PATRON_STATE,		changeStateHandler);
 	stateManager.addStateChangeListener(SHOW_PATRON_STATE,		INSERT_PATRON_STATE,	changeStateHandler);
 	stateManager.addStateChangeListener(INSERT_PATRON_STATE,	SHOW_PATRON_STATE,		changeStateHandler);
-	stateManager.addStateChangeListener(INSERT_PATRON_STATE,	YOU_WIN_STATE,			changeStateHandler);
-	stateManager.addStateChangeListener(INSERT_PATRON_STATE,	YOU_LOSE_STATE,			changeStateHandler);
+	stateManager.addStateChangeListener(INSERT_PATRON_STATE,	YOU_WIN_STATE,			changeStateHandlerEndGame);
+	stateManager.addStateChangeListener(INSERT_PATRON_STATE,	YOU_LOSE_STATE,			changeStateHandlerEndGame);
 	stateManager.addStateChangeListener(YOU_WIN_STATE,			INIT_STATE,				changeStateHandler);
 	stateManager.addStateChangeListener(YOU_LOSE_STATE,			INIT_STATE,				changeStateHandler);
 
@@ -494,12 +574,12 @@ int main (void) {
 
 	//Creamos los hilos
 	pthread_create(&my_pthread_state_monitor,  	&attr,  pthread_state_monitor,  (void*)&state_monitor_cfg);
-	//	pthread_create(&my_pthread_read_input,  	&attr,  pthread_read_input,  	(void*)&read_input_cfg);
+	pthread_create(&my_pthread_read_input,  	&attr,  pthread_read_input,  	(void*)&read_input_cfg);
 	//	pthread_create(&my_pthread_lcd,  			&attr,  pthread_lcd,  			(void*)&lcd_cfg);
-	//	pthread_create(&my_pthread_timer,  			&attr,  pthread_timer,  		(void*)&timer_cfg);
+	pthread_create(&my_pthread_timer,  			&attr,  pthread_timer,  		(void*)&timer_cfg);
 	//	pthread_create(&my_pthread_config_game,  	&attr,  pthread_config_game,  	(void*)&config_game_cfg);
 	pthread_create(&my_pthread_show_patron,  	&attr,  pthread_show_patron,  	(void*)&show_patron_cfg);
-	pthread_create(&my_pthread_insert_patron,  	&attr,  pthread_insert_patron,  (void*)&insert_patron_cfg);
+	//pthread_create(&my_pthread_insert_patron,  	&attr,  pthread_insert_patron,  (void*)&insert_patron_cfg);
 	//	pthread_create(&my_pthread_pause,  			&attr,  pthread_pause,  		(void*)&pause_cfg);
 
 
@@ -507,10 +587,13 @@ int main (void) {
 	srand (time(NULL));
 
 	//TODO: estado hardcodeado, borrar luego
-	stateManager.changeState(1);
+	stateManager.changeState(SHOW_PATRON_STATE);
 
 	for(;;) {
 		//Estado de espera
+		usleep(5000000);
+		//		myState = (stateManager.getState() + 1) % 4;
+		//		stateManager.changeState(myState);
 	}
 
 	pthread_join(my_pthread_state_monitor,	NULL);
@@ -522,5 +605,4 @@ int main (void) {
 	pthread_join(my_pthread_insert_patron,	NULL);
 	pthread_join(my_pthread_pause,			NULL);
 }
-
 
