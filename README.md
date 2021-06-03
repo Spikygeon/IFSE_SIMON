@@ -1,0 +1,3 @@
+# IFSE_SIMON
+IFSE - trabajo de la máquina SIMON
+OJO !!! ESTÁ HARDCODEADO EL TIEMPO Y LA VELOCIDAD !!!!
